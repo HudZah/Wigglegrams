@@ -114,17 +114,20 @@ export default function Home() {
                 </Carousel>
             </div>
             <div className="flex justify-center my-8 space-x-6">
-                <Button
-                    variant={"secondary"}
-                    onClick={() =>
-                        images.length > 0
-                            ? reset(setImages, setCarouselLength)
-                            : upload(setImages, setCarouselLength, toast)
-                    }
-                >
-                    {images.length > 0 ? "Reset" : "Upload"}
-                </Button>
-                <Button>Generate</Button>
+                <div className="w-full max-w-[16rem] flex justify-between space-x-4">
+                    <Button
+                        className="flex-1"
+                        variant={"secondary"}
+                        onClick={() =>
+                            images.length > 0
+                                ? reset(setImages, setCarouselLength)
+                                : upload(setImages, setCarouselLength, toast)
+                        }
+                    >
+                        {images.length > 0 ? "Reset" : "Upload"}
+                    </Button>
+                    <Button className="flex-1">Generate</Button>
+                </div>
             </div>
         </>
     );
