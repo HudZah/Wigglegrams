@@ -1,7 +1,11 @@
 "use client";
 
-import * as React from "react";
+import "./styles.css";
+
+import React, { useRef } from "react";
 import { useToast } from "@/components/ui/use-toast";
+
+import ReactImageMagnifier from "simple-image-magnifier/react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -93,21 +97,22 @@ export default function Home() {
             <div className="flex justify-center items-center h-[60%]">
                 <Carousel setApi={setApi} className="w-full max-w-[32rem]">
                     <CarouselContent>
-                        {Array.from({ length: carouselLength }).map(
-                            (_, index) => (
-                                <CarouselItem key={index}>
-                                    <div className="p-1">
-                                        <Card>
-                                            <CardContent className="flex aspect-square items-center justify-center p-6">
-                                                <span className="text-4xl font-semibold">
-                                                    {index + 1}
-                                                </span>
-                                            </CardContent>
-                                        </Card>
-                                    </div>
-                                </CarouselItem>
-                            )
-                        )}
+                        {images.map((imageSrc, index) => (
+                            <CarouselItem key={index}>
+                                <div className="p-1">
+                                    <Card>
+                                        <CardContent className="flex aspect-square items-center justify-center p-1">
+                                            <ReactImageMagnifier
+                                                srcPreview={imageSrc}
+                                                srcOriginal={imageSrc}
+                                                width="100%"
+                                                height="100%"
+                                            />
+                                        </CardContent>
+                                    </Card>
+                                </div>
+                            </CarouselItem>
+                        ))}
                     </CarouselContent>
                     <CarouselPrevious />
                     <CarouselNext />
