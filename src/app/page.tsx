@@ -106,7 +106,8 @@ export default function Home() {
                             Wigglegrams
                         </h2>
                         <p className="text-muted-foreground">
-                            Create wigglegrams in just a few clicks
+                            Create wigglegrams in just a few clicks. Upload a
+                            minimum of 3 images to get started.
                         </p>
                     </div>
                 </div>
@@ -114,20 +115,34 @@ export default function Home() {
             <div className="flex justify-center items-center h-[60%]">
                 <Carousel setApi={setApi} className="w-full max-w-[32rem]">
                     <CarouselContent>
-                        {images.map((imageSrc, index) => (
+                        {(images.length > 0
+                            ? images
+                            : Array(3).fill("placeholder_image_src")
+                        ).map((imageSrc, index) => (
                             <CarouselItem
                                 key={index}
-                                onClick={() => handleImageClick(index)}
+                                onClick={() =>
+                                    images.length > 0 && handleImageClick(index)
+                                }
                             >
                                 <div className="p-1 relative">
                                     <Card>
                                         <CardContent className="flex aspect-square items-center justify-center p-1">
-                                            <ReactImageMagnifier
-                                                srcPreview={imageSrc}
-                                                srcOriginal={imageSrc}
-                                                width="100%"
-                                                height="100%"
-                                            />
+                                            {imageSrc ===
+                                            "placeholder_image_src" ? (
+                                                <div className="flex aspect-square items-center justify-center w-full h-full">
+                                                    <span className="text-4xl font-semibold">
+                                                        Image {index + 1}
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <ReactImageMagnifier
+                                                    srcPreview={imageSrc}
+                                                    srcOriginal={imageSrc}
+                                                    width="100%"
+                                                    height="100%"
+                                                />
+                                            )}
                                         </CardContent>
                                     </Card>
                                     {selectedImages.has(index) && (
