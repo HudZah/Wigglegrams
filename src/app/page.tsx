@@ -2,7 +2,7 @@
 
 import "./styles.css";
 
-import React, { useRef } from "react";
+import React, { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 
 import ReactImageMagnifier from "simple-image-magnifier/react";
@@ -46,7 +46,6 @@ const upload = (
             } else {
                 console.log("toast");
                 toast({
-                    variant: "destructive",
                     title: "Minimum 3 Images Required",
                     description: "Please select at least 3 images to proceed.",
                 });
@@ -58,16 +57,21 @@ const upload = (
 
 const reset = (
     setImages: React.Dispatch<React.SetStateAction<string[]>>,
-    setCarouselLength: React.Dispatch<React.SetStateAction<number>>
+    setCarouselLength: React.Dispatch<React.SetStateAction<number>>,
+    setSelectedImages: React.Dispatch<React.SetStateAction<Set<number>>>
 ) => {
     setImages([]);
     setCarouselLength(3);
+    setSelectedImages(new Set());
 };
 
 export default function Home() {
     const [images, setImages] = React.useState<string[]>([]);
     const [carouselLength, setCarouselLength] = React.useState<number>(3);
     const [api, setApi] = React.useState<CarouselApi | null>(null);
+    const [selectedImages, setSelectedImages] = useState<Set<number>>(
+        new Set()
+    );
     const { toast } = useToast();
 
     React.useEffect(() => {
@@ -80,6 +84,19 @@ export default function Home() {
             console.log("carouselLength", carouselLength);
         });
     }, [api, carouselLength]);
+
+    const handleImageClick = (index: number) => {
+        setSelectedImages((prevSelectedImages) => {
+            const newSelectedImages = new Set(prevSelectedImages);
+            if (newSelectedImages.has(index)) {
+                newSelectedImages.delete(index);
+            } else {
+                newSelectedImages.add(index);
+            }
+            return newSelectedImages;
+        });
+    };
+
     return (
         <>
             <div className="hidden h-full flex-1 flex-col space-y-8 p-8 md:flex">
@@ -98,8 +115,11 @@ export default function Home() {
                 <Carousel setApi={setApi} className="w-full max-w-[32rem]">
                     <CarouselContent>
                         {images.map((imageSrc, index) => (
-                            <CarouselItem key={index}>
-                                <div className="p-1">
+                            <CarouselItem
+                                key={index}
+                                onClick={() => handleImageClick(index)}
+                            >
+                                <div className="p-1 relative">
                                     <Card>
                                         <CardContent className="flex aspect-square items-center justify-center p-1">
                                             <ReactImageMagnifier
@@ -110,6 +130,13 @@ export default function Home() {
                                             />
                                         </CardContent>
                                     </Card>
+                                    {selectedImages.has(index) && (
+                                        <div className="absolute top-0 left-0 right-0 bottom-0 flex justify-center items-center">
+                                            <div className="text-red-500 text-4xl">
+                                                ✖
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </CarouselItem>
                         ))}
@@ -125,7 +152,11 @@ export default function Home() {
                         variant={"secondary"}
                         onClick={() =>
                             images.length > 0
-                                ? reset(setImages, setCarouselLength)
+                                ? reset(
+                                      setImages,
+                                      setCarouselLength,
+                                      setSelectedImages
+                                  )
                                 : upload(setImages, setCarouselLength, toast)
                         }
                     >
