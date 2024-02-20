@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 
 const upload = (
     setImages: React.Dispatch<React.SetStateAction<string[]>>,
+    setOriginalImages: React.Dispatch<React.SetStateAction<string[]>>,
     setCarouselLength: React.Dispatch<React.SetStateAction<number>>,
     toast: ({
         title,
@@ -42,6 +43,7 @@ const upload = (
                     URL.createObjectURL(file)
                 );
                 setImages(newImages);
+                setOriginalImages(newImages);
                 setCarouselLength(newImages.length);
             } else {
                 console.log("toast");
@@ -58,20 +60,20 @@ const upload = (
 const reset = (
     setImages: React.Dispatch<React.SetStateAction<string[]>>,
     setCarouselLength: React.Dispatch<React.SetStateAction<number>>,
-    setSelectedImages: React.Dispatch<React.SetStateAction<Set<number>>>
+    setPoints: React.Dispatch<React.SetStateAction<{ x: number; y: number }[]>>
 ) => {
     setImages([]);
     setCarouselLength(3);
-    setSelectedImages(new Set());
+    setPoints([]);
 };
 
 export default function Home() {
     const [images, setImages] = React.useState<string[]>([]);
+    const [originalImages, setOriginalImages] = React.useState<string[]>([]);
     const [carouselLength, setCarouselLength] = React.useState<number>(3);
     const [api, setApi] = React.useState<CarouselApi | null>(null);
-    const [selectedImages, setSelectedImages] = useState<Set<number>>(
-        new Set()
-    );
+    const [points, setPoints] = React.useState<{ x: number; y: number }[]>([]);
+
     const { toast } = useToast();
 
     React.useEffect(() => {
@@ -85,16 +87,58 @@ export default function Home() {
         });
     }, [api, carouselLength]);
 
-    const handleImageClick = (index: number) => {
-        setSelectedImages((prevSelectedImages) => {
-            const newSelectedImages = new Set(prevSelectedImages);
-            if (newSelectedImages.has(index)) {
-                newSelectedImages.delete(index);
-            } else {
-                newSelectedImages.add(index);
-            }
-            return newSelectedImages;
+    const handleAddPoint = (
+        event: React.MouseEvent<HTMLDivElement>,
+        index: number
+    ) => {
+        const rect = event.currentTarget.getBoundingClientRect();
+        const x = event.clientX - rect.left; // x position within the element.
+        const y = event.clientY - rect.top; // y position within the element.
+
+        const pointExists = points[index] !== undefined;
+        console.log("pointExists", pointExists);
+
+        setPoints((prevPoints) => {
+            const newPoints = [...prevPoints];
+            newPoints[index] = { x, y };
+            return newPoints;
         });
+
+        if (images[index]) {
+            // Use original image as a base if a point already exists, otherwise use the current image
+            const baseImageSrc = pointExists
+                ? originalImages[index]
+                : images[index];
+            const imgElement = new Image();
+            imgElement.onload = () => {
+                const canvas = document.createElement("canvas");
+                const ctx = canvas.getContext("2d");
+                if (ctx) {
+                    canvas.width = imgElement.naturalWidth;
+                    canvas.height = imgElement.naturalHeight;
+                    ctx.drawImage(imgElement, 0, 0);
+                    ctx.fillStyle = "red"; // Set the fill color to red before drawing the circle
+                    ctx.beginPath(); // Begin a new path for the circle
+                    ctx.arc(
+                        x * (imgElement.naturalWidth / rect.width),
+                        y * (imgElement.naturalHeight / rect.height),
+                        5, // Radius of the circle
+                        0, // Start angle
+                        2 * Math.PI // End angle (full circle)
+                    );
+                    ctx.fill(); // Fill the circle with the current fill style
+                    ctx.strokeStyle = "red"; // Set the stroke color to red for the border
+                    ctx.strokeRect(0, 0, canvas.width, canvas.height);
+                    const newImageSrc = canvas.toDataURL("image/png");
+                    setImages((prevImages) => {
+                        const updatedImages = [...prevImages];
+                        updatedImages[index] = newImageSrc;
+                        return updatedImages;
+                    });
+                }
+            };
+            imgElement.src = baseImageSrc;
+        }
     };
 
     return (
@@ -119,12 +163,7 @@ export default function Home() {
                             ? images
                             : Array(3).fill("placeholder_image_src")
                         ).map((imageSrc, index) => (
-                            <CarouselItem
-                                key={index}
-                                onClick={() =>
-                                    images.length > 0 && handleImageClick(index)
-                                }
-                            >
+                            <CarouselItem key={index}>
                                 <div className="p-1 relative">
                                     <Card>
                                         <CardContent className="flex aspect-square items-center justify-center p-1">
@@ -136,22 +175,30 @@ export default function Home() {
                                                     </span>
                                                 </div>
                                             ) : (
-                                                <ReactImageMagnifier
-                                                    srcPreview={imageSrc}
-                                                    srcOriginal={imageSrc}
-                                                    width="100%"
-                                                    height="100%"
-                                                />
+                                                <div
+                                                    onClick={(event) => {
+                                                        if (images.length > 0) {
+                                                            handleAddPoint(
+                                                                event,
+                                                                index
+                                                            );
+                                                        }
+                                                    }}
+                                                    style={{
+                                                        position: "relative",
+                                                        cursor: "pointer",
+                                                    }}
+                                                >
+                                                    <ReactImageMagnifier
+                                                        srcPreview={imageSrc}
+                                                        srcOriginal={imageSrc}
+                                                        width="100%"
+                                                        height="100%"
+                                                    />
+                                                </div>
                                             )}
                                         </CardContent>
                                     </Card>
-                                    {selectedImages.has(index) && (
-                                        <div className="absolute top-0 left-0 right-0 bottom-0 flex justify-center items-center">
-                                            <div className="text-red-500 text-4xl">
-                                                ✖
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
                             </CarouselItem>
                         ))}
@@ -167,12 +214,13 @@ export default function Home() {
                         variant={"secondary"}
                         onClick={() =>
                             images.length > 0
-                                ? reset(
+                                ? reset(setImages, setCarouselLength, setPoints)
+                                : upload(
                                       setImages,
+                                      setOriginalImages,
                                       setCarouselLength,
-                                      setSelectedImages
+                                      toast
                                   )
-                                : upload(setImages, setCarouselLength, toast)
                         }
                     >
                         {images.length > 0 ? "Reset" : "Upload"}
