@@ -1,10 +1,10 @@
 "use client";
 
 import "./styles.css";
-
 import React, { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 
+import GIF from "gif.js";
 import ReactImageMagnifier from "simple-image-magnifier/react";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -49,6 +49,7 @@ const upload = (
                 console.log("toast");
                 toast({
                     title: "Minimum 3 Images Required",
+                    variant: "destructive",
                     description: "Please select at least 3 images to proceed.",
                 });
             }
@@ -67,12 +68,125 @@ const reset = (
     setPoints([]);
 };
 
+const generate = (images: string[], points: { x: number; y: number }[]) => {
+    const refPoint = points[0];
+
+    const transformedImages = images.map((imageSrc, index) => {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = "Anonymous";
+            img.onload = () => {
+                const canvas = document.createElement("canvas");
+                const ctx = canvas.getContext("2d");
+                canvas.width = img.width;
+                canvas.height = img.height;
+
+                console.log("Image", index, img.width, img.height);
+
+                const selectedPoint = points[index];
+                const dx = refPoint.x - selectedPoint.x;
+                const dy = refPoint.y - selectedPoint.y;
+                console.log("New Point for ", index, dx, dy);
+
+                if (ctx) {
+                    ctx.translate(dx, dy);
+                    ctx.drawImage(img, 0, 0);
+                    ctx.setTransform(1, 0, 0, 1, 0, 0);
+                }
+                const dataUrl = canvas.toDataURL("image/png");
+                resolve(dataUrl);
+            };
+            img.onerror = () => reject(new Error("Image loading failed"));
+            img.src = imageSrc;
+        });
+    });
+    console.log("transformedImages", transformedImages);
+    Promise.all(transformedImages).then((dataUrls) => {
+        console.log("Aligned Images:", dataUrls);
+        createGif(dataUrls as string[]);
+    });
+    async function createGif(images: string[]) {
+        try {
+            const response = await fetch(
+                "https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js"
+            );
+            if (!response.ok) throw new Error("Network response was not OK");
+            const workerBlob = await response.blob();
+
+            // @ts-ignore
+            const firstImage = new Image();
+            firstImage.src = images[0];
+            await new Promise((resolve) => {
+                firstImage.onload = () => resolve(true);
+            });
+            let gif = new GIF({
+                workers: 2,
+                quality: 10,
+                width: firstImage.width,
+                height: firstImage.height,
+                repeat: 0,
+                workerScript: URL.createObjectURL(workerBlob),
+            });
+
+            for (let i = 0; i < images.length; i++) {
+                const img = new Image();
+                img.src = images[i];
+                await new Promise((resolve) => setTimeout(resolve, 1));
+                // const imageWindow = window.open();
+                // if (imageWindow) {
+                //     imageWindow.document.write(
+                //         '<img src="' +
+                //             images[i] +
+                //             '" style="width:auto; height:100%;" />'
+                //     );
+                // }
+                gif.addFrame(img, { delay: 100 });
+            }
+            // backwards loop
+            for (let i = images.length - 2; i > 0; i--) {
+                const img = new Image();
+                img.src = images[i];
+                await new Promise((resolve) => setTimeout(resolve, 1));
+                // const imageWindow = window.open();
+                // if (imageWindow) {
+                //     imageWindow.document.write(
+                //         '<img src="' +
+                //             images[i] +
+                //             '" style="width:auto; height:100%;" />'
+                //     );
+                // }
+                gif.addFrame(img, { delay: 100 });
+            }
+
+            gif.on("start", () => {
+                console.log("GIF started");
+            });
+
+            gif.on("progress", (progress: number) => {
+                console.log("progress", progress);
+            });
+
+            gif.on("finished", function (blob: Blob) {
+                console.log("GIF finished");
+                const url = URL.createObjectURL(blob);
+                window.open(url);
+                console.log("GIF saved at:", url);
+            });
+
+            gif.render();
+        } catch (error) {
+            console.error("Failed to create GIF", error);
+        }
+    }
+};
 export default function Home() {
     const [images, setImages] = React.useState<string[]>([]);
     const [originalImages, setOriginalImages] = React.useState<string[]>([]);
     const [carouselLength, setCarouselLength] = React.useState<number>(3);
     const [api, setApi] = React.useState<CarouselApi | null>(null);
     const [points, setPoints] = React.useState<{ x: number; y: number }[]>([]);
+    const [count, setCount] = React.useState(0);
+    const [current, setCurrent] = React.useState(0);
 
     const { toast } = useToast();
 
@@ -81,9 +195,12 @@ export default function Home() {
             return;
         }
 
+        setCount(api.scrollSnapList().length);
+        setCurrent(api.selectedScrollSnap() + 1);
+
         api.on("select", () => {
             console.log("current");
-            console.log("carouselLength", carouselLength);
+            setCurrent(api.selectedScrollSnap() + 1);
         });
     }, [api, carouselLength]);
 
@@ -97,6 +214,7 @@ export default function Home() {
 
         const pointExists = points[index] !== undefined;
         console.log("pointExists", pointExists);
+        console.log("points", points);
 
         setPoints((prevPoints) => {
             const newPoints = [...prevPoints];
@@ -122,13 +240,11 @@ export default function Home() {
                     ctx.arc(
                         x * (imgElement.naturalWidth / rect.width),
                         y * (imgElement.naturalHeight / rect.height),
-                        5, // Radius of the circle
+                        3, // Radius of the circle
                         0, // Start angle
                         2 * Math.PI // End angle (full circle)
                     );
                     ctx.fill(); // Fill the circle with the current fill style
-                    ctx.strokeStyle = "red"; // Set the stroke color to red for the border
-                    ctx.strokeRect(0, 0, canvas.width, canvas.height);
                     const newImageSrc = canvas.toDataURL("image/png");
                     setImages((prevImages) => {
                         const updatedImages = [...prevImages];
@@ -207,6 +323,20 @@ export default function Home() {
                     <CarouselNext />
                 </Carousel>
             </div>
+            <div className="flex items-center justify-center h-full py-2">
+                {Array(images.length)
+                    .fill(null)
+                    .map((_, index) => (
+                        <span
+                            key={index}
+                            className={`inline-block mx-1 rounded-full ${
+                                index + 1 === current
+                                    ? "bg-primary"
+                                    : "bg-gray-300"
+                            } w-3 h-3`}
+                        ></span>
+                    ))}
+            </div>
             <div className="flex justify-center my-8 space-x-6">
                 <div className="w-full max-w-[16rem] flex justify-between space-x-4">
                     <Button
@@ -225,7 +355,29 @@ export default function Home() {
                     >
                         {images.length > 0 ? "Reset" : "Upload"}
                     </Button>
-                    <Button className="flex-1">Generate</Button>
+                    <Button
+                        className="flex-1"
+                        onClick={() => {
+                            if (
+                                points.filter((point) => point !== undefined)
+                                    .length === images.length
+                            ) {
+                                generate(originalImages, points);
+                            } else {
+                                toast({
+                                    title:
+                                        "Minimum " +
+                                        images.length +
+                                        " points required",
+                                    variant: "destructive",
+                                    description:
+                                        "Please add a point to each image.",
+                                });
+                            }
+                        }}
+                    >
+                        Generate
+                    </Button>
                 </div>
             </div>
         </>

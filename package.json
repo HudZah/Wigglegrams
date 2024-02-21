@@ -9,12 +9,13 @@
         "lint": "next lint"
     },
     "dependencies": {
-        "@niklasmaki/react-image-magnifiers": "^1.4.3",
         "@radix-ui/react-slot": "^1.0.2",
         "@radix-ui/react-toast": "^1.1.5",
         "class-variance-authority": "^0.7.0",
         "clsx": "^2.1.0",
         "embla-carousel-react": "^8.0.0-rc22",
+        "gif-encoder-2": "^1.0.5",
+        "gif.js": "^0.2.0",
         "lucide-react": "^0.331.0",
         "next": "14.1.0",
         "react": "^18",
@@ -25,6 +26,7 @@
         "tailwindcss-animate": "^1.0.7"
     },
     "devDependencies": {
+        "@types/gif.js": "^0.2.5",
         "@types/node": "20.11.19",
         "@types/react": "18.2.56",
         "@types/react-dom": "^18",
