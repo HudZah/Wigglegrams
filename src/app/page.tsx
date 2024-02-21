@@ -219,7 +219,7 @@ export default function Home() {
             return;
         }
         const generateAsync = async () => {
-            await generate(images, points, setIsGenerating);
+            await generate(originalImages, points, setIsGenerating);
         };
         generateAsync();
     }, [isGenerating]);
@@ -405,8 +405,7 @@ export default function Home() {
                                 <DialogTitle>Generate Wigglegram</DialogTitle>
                             </DialogHeader>
                             <DialogDescription>
-                                Set the frame duration in ms and click generate
-                                to create the wigglegram.
+                                Set the frame duration in ms and click generate.
                             </DialogDescription>
                             <div className="flex flex-col space-y-4">
                                 <div className="flex items-center space-x-2">
