@@ -229,8 +229,8 @@ export default function Home() {
         index: number
     ) => {
         const rect = event.currentTarget.getBoundingClientRect();
-        const x = event.clientX - rect.left; // x position within the element.
-        const y = event.clientY - rect.top; // y position within the element.
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
 
         const pointExists = points[index] !== undefined;
         console.log("pointExists", pointExists);
@@ -243,7 +243,6 @@ export default function Home() {
         });
 
         if (images[index]) {
-            // Use original image as a base if a point already exists, otherwise use the current image
             const baseImageSrc = pointExists
                 ? originalImages[index]
                 : images[index];
@@ -255,16 +254,16 @@ export default function Home() {
                     canvas.width = imgElement.naturalWidth;
                     canvas.height = imgElement.naturalHeight;
                     ctx.drawImage(imgElement, 0, 0);
-                    ctx.fillStyle = "red"; // Set the fill color to red before drawing the circle
-                    ctx.beginPath(); // Begin a new path for the circle
+                    ctx.fillStyle = "red";
+                    ctx.beginPath();
                     ctx.arc(
                         x * (imgElement.naturalWidth / rect.width),
                         y * (imgElement.naturalHeight / rect.height),
-                        3, // Radius of the circle
-                        0, // Start angle
-                        2 * Math.PI // End angle (full circle)
+                        3,
+                        0,
+                        2 * Math.PI
                     );
-                    ctx.fill(); // Fill the circle with the current fill style
+                    ctx.fill();
                     const newImageSrc = canvas.toDataURL("image/png");
                     setImages((prevImages) => {
                         const updatedImages = [...prevImages];
