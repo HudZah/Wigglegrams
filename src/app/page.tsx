@@ -2,6 +2,8 @@
 
 import "./styles.css";
 import React, { useState } from "react";
+import { Loader2 } from "lucide-react";
+
 import { useToast } from "@/components/ui/use-toast";
 
 import GIF from "gif.js";
@@ -17,6 +19,18 @@ import {
     type CarouselApi,
 } from "@/components/ui/carousel";
 import { Button } from "@/components/ui/button";
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const upload = (
     setImages: React.Dispatch<React.SetStateAction<string[]>>,
@@ -68,9 +82,12 @@ const reset = (
     setPoints([]);
 };
 
-const generate = (images: string[], points: { x: number; y: number }[]) => {
+const generate = async (
+    images: string[],
+    points: { x: number; y: number }[],
+    setIsGenerating: React.Dispatch<React.SetStateAction<boolean>>
+) => {
     const refPoint = points[0];
-
     const transformedImages = images.map((imageSrc, index) => {
         return new Promise((resolve, reject) => {
             const img = new Image();
@@ -101,82 +118,73 @@ const generate = (images: string[], points: { x: number; y: number }[]) => {
         });
     });
     console.log("transformedImages", transformedImages);
-    Promise.all(transformedImages).then((dataUrls) => {
+    Promise.all(transformedImages).then(async (dataUrls) => {
         console.log("Aligned Images:", dataUrls);
-        createGif(dataUrls as string[]);
+        await createGif(dataUrls as string[]);
     });
     async function createGif(images: string[]) {
-        try {
-            const response = await fetch(
-                "https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js"
-            );
-            if (!response.ok) throw new Error("Network response was not OK");
-            const workerBlob = await response.blob();
+        return new Promise(async (resolve, reject) => {
+            try {
+                const response = await fetch(
+                    "https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js"
+                );
+                if (!response.ok)
+                    throw new Error("Network response was not OK");
+                const workerBlob = await response.blob();
 
-            // @ts-ignore
-            const firstImage = new Image();
-            firstImage.src = images[0];
-            await new Promise((resolve) => {
-                firstImage.onload = () => resolve(true);
-            });
-            let gif = new GIF({
-                workers: 2,
-                quality: 10,
-                width: firstImage.width,
-                height: firstImage.height,
-                repeat: 0,
-                workerScript: URL.createObjectURL(workerBlob),
-            });
+                // @ts-ignore
+                const firstImage = new Image();
+                firstImage.src = images[0];
+                await new Promise((resolve) => {
+                    firstImage.onload = () => resolve(true);
+                });
+                let gif = new GIF({
+                    workers: 2,
+                    quality: 10,
+                    width: firstImage.width,
+                    height: firstImage.height,
+                    repeat: 0,
+                    workerScript: URL.createObjectURL(workerBlob),
+                });
 
-            for (let i = 0; i < images.length; i++) {
-                const img = new Image();
-                img.src = images[i];
-                await new Promise((resolve) => setTimeout(resolve, 1));
-                // const imageWindow = window.open();
-                // if (imageWindow) {
-                //     imageWindow.document.write(
-                //         '<img src="' +
-                //             images[i] +
-                //             '" style="width:auto; height:100%;" />'
-                //     );
-                // }
-                gif.addFrame(img, { delay: 100 });
+                for (let i = 0; i < images.length; i++) {
+                    const img = new Image();
+                    img.src = images[i];
+                    await new Promise((resolve) => setTimeout(resolve, 1));
+                    gif.addFrame(img, { delay: 100 });
+                }
+                // backwards loop
+                for (let i = images.length - 2; i > 0; i--) {
+                    const img = new Image();
+                    img.src = images[i];
+                    await new Promise((resolve) => setTimeout(resolve, 1));
+                    gif.addFrame(img, { delay: 100 });
+                }
+
+                gif.on("start", () => {
+                    console.log("GIF started");
+                });
+
+                gif.on("progress", (progress: number) => {
+                    console.log("progress", progress);
+                });
+
+                gif.on("finished", function (blob: Blob) {
+                    console.log("GIF finished");
+                    const url = URL.createObjectURL(blob);
+                    window.open(url);
+                    console.log("GIF saved at:", url);
+                    resolve(url);
+                    setIsGenerating(false);
+                });
+
+                gif.render();
+            } catch (error) {
+                console.error("Failed to create GIF", error);
+                setIsGenerating(false);
+                reject(error);
             }
-            // backwards loop
-            for (let i = images.length - 2; i > 0; i--) {
-                const img = new Image();
-                img.src = images[i];
-                await new Promise((resolve) => setTimeout(resolve, 1));
-                // const imageWindow = window.open();
-                // if (imageWindow) {
-                //     imageWindow.document.write(
-                //         '<img src="' +
-                //             images[i] +
-                //             '" style="width:auto; height:100%;" />'
-                //     );
-                // }
-                gif.addFrame(img, { delay: 100 });
-            }
-
-            gif.on("start", () => {
-                console.log("GIF started");
-            });
-
-            gif.on("progress", (progress: number) => {
-                console.log("progress", progress);
-            });
-
-            gif.on("finished", function (blob: Blob) {
-                console.log("GIF finished");
-                const url = URL.createObjectURL(blob);
-                window.open(url);
-                console.log("GIF saved at:", url);
-            });
-
-            gif.render();
-        } catch (error) {
-            console.error("Failed to create GIF", error);
-        }
+        });
     }
 };
 export default function Home() {
@@ -187,6 +195,7 @@ export default function Home() {
     const [points, setPoints] = React.useState<{ x: number; y: number }[]>([]);
     const [count, setCount] = React.useState(0);
     const [current, setCurrent] = React.useState(0);
+    const [isGenerating, setIsGenerating] = React.useState(false);
 
     const { toast } = useToast();
 
@@ -203,6 +212,17 @@ export default function Home() {
             setCurrent(api.selectedScrollSnap() + 1);
         });
     }, [api, carouselLength]);
+
+    React.useEffect(() => {
+        console.log("isGenerating changed:", isGenerating);
+        if (!isGenerating) {
+            return;
+        }
+        const generateAsync = async () => {
+            await generate(images, points, setIsGenerating);
+        };
+        generateAsync();
+    }, [isGenerating]);
 
     const handleAddPoint = (
         event: React.MouseEvent<HTMLDivElement>,
@@ -251,6 +271,7 @@ export default function Home() {
                         updatedImages[index] = newImageSrc;
                         return updatedImages;
                     });
+                    setIsGenerating(false);
                 }
             };
             imgElement.src = baseImageSrc;
@@ -355,29 +376,69 @@ export default function Home() {
                     >
                         {images.length > 0 ? "Reset" : "Upload"}
                     </Button>
-                    <Button
-                        className="flex-1"
-                        onClick={() => {
-                            if (
-                                points.filter((point) => point !== undefined)
-                                    .length === images.length
-                            ) {
-                                generate(originalImages, points);
-                            } else {
-                                toast({
-                                    title:
-                                        "Minimum " +
-                                        images.length +
-                                        " points required",
-                                    variant: "destructive",
-                                    description:
-                                        "Please add a point to each image.",
-                                });
-                            }
-                        }}
-                    >
-                        Generate
-                    </Button>
+                    <Dialog>
+                        {points.filter((point) => point !== undefined)
+                            .length === images.length ? (
+                            <DialogTrigger asChild>
+                                <Button className="flex-1">Generate</Button>
+                            </DialogTrigger>
+                        ) : (
+                            <Button
+                                className="flex-1"
+                                onClick={() =>
+                                    toast({
+                                        title:
+                                            "Minimum " +
+                                            images.length +
+                                            " points required",
+                                        variant: "destructive",
+                                        description:
+                                            "Please add a point to each image.",
+                                    })
+                                }
+                            >
+                                Generate
+                            </Button>
+                        )}
+                        <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                                <DialogTitle>Generate Wigglegram</DialogTitle>
+                            </DialogHeader>
+                            <DialogDescription>
+                                Set the frame duration in ms and click generate
+                                to create the wigglegram.
+                            </DialogDescription>
+                            <div className="flex flex-col space-y-4">
+                                <div className="flex items-center space-x-2">
+                                    <Input
+                                        id="frameDuration"
+                                        type="number"
+                                        defaultValue="100"
+                                        placeholder="Enter Frame Duration (ms)"
+                                        // TODO: add frame duration functionality
+                                    />
+                                </div>
+                            </div>
+                            <DialogFooter className="sm:justify-end">
+                                <Button
+                                    type="button"
+                                    onClick={async () => {
+                                        setIsGenerating(true);
+                                    }}
+                                    disabled={isGenerating}
+                                >
+                                    {isGenerating ? (
+                                        <>
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            Generating...
+                                        </>
+                                    ) : (
+                                        "Generate"
+                                    )}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                 </div>
             </div>
         </>
