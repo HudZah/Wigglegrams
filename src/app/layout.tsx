@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import { Jua } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
-import { Analytics } from "@vercel/analytics/react"
+import { Analytics } from "@vercel/analytics/react";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -15,7 +15,7 @@ const font = Jua({
 
 export const metadata: Metadata = {
     title: "Wigglegrams",
-    description: "Create wigglegrams in just a few clicks",\
+    description: "Create wigglegrams in just a few clicks",
 };
 
 export default function RootLayout({
