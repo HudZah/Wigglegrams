@@ -71,6 +71,7 @@ const upload = (
                 console.log("toast");
                 toast({
                     title: "Minimum 3 Images Required",
+                    // @ts-ignore
                     variant: "destructive",
                     description: "Please select at least 3 images to proceed.",
                 });
