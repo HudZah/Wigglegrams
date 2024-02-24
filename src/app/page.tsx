@@ -294,7 +294,8 @@ export default function Home() {
                     </h1>
                     <p className="text-muted-foreground">
                         Create wigglegrams in just a few clicks. Upload a
-                        minimum of 3 images to get started.
+                        minimum of 3 images to get started. Your photos never
+                        leave your device.
                     </p>
                 </div>
                 <Button>
@@ -385,7 +386,7 @@ export default function Home() {
                                   )
                         }
                     >
-                        {images.length > 0 ? "Reset" : "Upload"}
+                        {images.length > 0 ? "Reset" : "Add Photos"}
                     </Button>
                     <Button
                         className="flex-1"
