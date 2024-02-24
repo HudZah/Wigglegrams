@@ -2,8 +2,9 @@
 
 import "./styles.css";
 import React, { useState } from "react";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, BookImage, Wand2 } from "lucide-react";
 import Head from "next/head";
+import Link from "next/link";
 
 import { useToast } from "@/components/ui/use-toast";
 import { ToastAction } from "@/components/ui/toast";
@@ -281,23 +282,25 @@ export default function Home() {
                     content="../../public/images/banner.png"
                 />
             </Head>
-            <div className="hidden h-full flex-1 flex-col space-y-8 p-8 md:flex">
-                <div className="flex items-center justify-between space-y-2">
-                    <div>
-                        <h1
-                            className={
-                                font.className +
-                                " text-3xl font-bold tracking-tight text-primary"
-                            }
-                        >
-                            Wigglegrams
-                        </h1>
-                        <p className="text-muted-foreground">
-                            Create wigglegrams in just a few clicks. Upload a
-                            minimum of 3 images to get started.
-                        </p>
-                    </div>
+            <div className="flex justify-between items-center w-full p-8">
+                <div>
+                    <h1
+                        className={
+                            font.className +
+                            " text-3xl font-bold tracking-tight text-primary"
+                        }
+                    >
+                        Wigglegrams
+                    </h1>
+                    <p className="text-muted-foreground">
+                        Create wigglegrams in just a few clicks. Upload a
+                        minimum of 3 images to get started.
+                    </p>
                 </div>
+                <Button>
+                    <BookImage className="mr-2 h-4 w-4" />
+                    <Link href="https://www.hudzah.com/photos">Gallery</Link>
+                </Button>
             </div>
             <div className="flex justify-center items-center h-[60%]">
                 <Carousel setApi={setApi} className="w-full max-w-[32rem]">
@@ -405,7 +408,7 @@ export default function Home() {
                             }
                         }}
                     >
-                        Generate
+                        <Wand2 className="mr-2 h-4 w-4" /> Generate
                     </Button>
 
                     <Dialog open={showDialog} onOpenChange={setShowDialog}>
