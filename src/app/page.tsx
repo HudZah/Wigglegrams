@@ -2,9 +2,11 @@
 
 import "./styles.css";
 import React, { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 
 import { useToast } from "@/components/ui/use-toast";
+import { ToastAction } from "@/components/ui/toast";
+import { Jua } from "next/font/google";
 
 import GIF from "gif.js";
 import ReactImageMagnifier from "simple-image-magnifier/react";
@@ -31,6 +33,12 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
+const font = Jua({
+    subsets: ["latin"],
+    weight: "400",
+    variable: "--font-jua",
+});
 
 const upload = (
     setImages: React.Dispatch<React.SetStateAction<string[]>>,
@@ -86,106 +94,100 @@ const generate = async (
     images: string[],
     points: { x: number; y: number }[],
     setIsGenerating: React.Dispatch<React.SetStateAction<boolean>>
-) => {
+): Promise<string> => {
     const refPoint = points[0];
-    const transformedImages = images.map((imageSrc, index) => {
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.crossOrigin = "Anonymous";
-            img.onload = () => {
-                const canvas = document.createElement("canvas");
-                const ctx = canvas.getContext("2d");
-                canvas.width = img.width;
-                canvas.height = img.height;
-
-                console.log("Image", index, img.width, img.height);
-
-                const selectedPoint = points[index];
-                const dx = refPoint.x - selectedPoint.x;
-                const dy = refPoint.y - selectedPoint.y;
-                console.log("New Point for ", index, dx, dy);
-
-                if (ctx) {
-                    ctx.translate(dx, dy);
-                    ctx.drawImage(img, 0, 0);
-                    ctx.setTransform(1, 0, 0, 1, 0, 0);
-                }
-                const dataUrl = canvas.toDataURL("image/png");
-                resolve(dataUrl);
-            };
-            img.onerror = () => reject(new Error("Image loading failed"));
-            img.src = imageSrc;
-        });
-    });
-    console.log("transformedImages", transformedImages);
-    Promise.all(transformedImages).then(async (dataUrls) => {
-        console.log("Aligned Images:", dataUrls);
-        await createGif(dataUrls as string[]);
-    });
-    async function createGif(images: string[]) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const response = await fetch(
-                    "https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js"
-                );
-                if (!response.ok)
-                    throw new Error("Network response was not OK");
-                const workerBlob = await response.blob();
-
-                // @ts-ignore
-                const firstImage = new Image();
-                firstImage.src = images[0];
-                await new Promise((resolve) => {
-                    firstImage.onload = () => resolve(true);
-                });
-                let gif = new GIF({
-                    workers: 2,
-                    quality: 10,
-                    width: firstImage.width,
-                    height: firstImage.height,
-                    repeat: 0,
-                    workerScript: URL.createObjectURL(workerBlob),
-                });
-
-                for (let i = 0; i < images.length; i++) {
+    const transformAndCreateGif = async (): Promise<string> => {
+        const transformedImages = await Promise.all(
+            images.map((imageSrc, index) => {
+                return new Promise<string>((resolve, reject) => {
                     const img = new Image();
-                    img.src = images[i];
-                    await new Promise((resolve) => setTimeout(resolve, 1));
-                    gif.addFrame(img, { delay: 100 });
-                }
-                // backwards loop
-                for (let i = images.length - 2; i > 0; i--) {
-                    const img = new Image();
-                    img.src = images[i];
-                    await new Promise((resolve) => setTimeout(resolve, 1));
-                    gif.addFrame(img, { delay: 100 });
-                }
+                    img.crossOrigin = "Anonymous";
+                    img.onload = () => {
+                        const canvas = document.createElement("canvas");
+                        const ctx = canvas.getContext("2d");
+                        canvas.width = img.width;
+                        canvas.height = img.height;
 
-                gif.on("start", () => {
-                    console.log("GIF started");
+                        const selectedPoint = points[index];
+                        const dx = refPoint.x - selectedPoint.x;
+                        const dy = refPoint.y - selectedPoint.y;
+
+                        if (ctx) {
+                            ctx.translate(dx, dy);
+                            ctx.drawImage(img, 0, 0);
+                            ctx.setTransform(1, 0, 0, 1, 0, 0);
+                        }
+                        const dataUrl = canvas.toDataURL("image/png");
+                        resolve(dataUrl);
+                    };
+                    img.onerror = () =>
+                        reject(new Error("Image loading failed"));
+                    img.src = imageSrc;
                 });
+            })
+        );
 
-                gif.on("progress", (progress: number) => {
-                    console.log("progress", progress);
-                });
+        try {
+            const response = await fetch(
+                "https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js"
+            );
+            if (!response.ok) throw new Error("Network response was not OK");
+            const workerBlob = await response.blob();
 
-                gif.on("finished", function (blob: Blob) {
-                    console.log("GIF finished");
-                    const url = URL.createObjectURL(blob);
-                    window.open(url);
-                    console.log("GIF saved at:", url);
-                    resolve(url);
-                    setIsGenerating(false);
+            const firstImage = new Image();
+            firstImage.src = transformedImages[0] as string;
+            await new Promise((resolve) => {
+                firstImage.onload = () => resolve(true);
+            });
+
+            let gif = new GIF({
+                workers: 2,
+                quality: 10,
+                width: firstImage.width,
+                height: firstImage.height,
+                repeat: 0,
+                workerScript: URL.createObjectURL(workerBlob),
+            });
+
+            for (let i = 0; i < transformedImages.length; i++) {
+                const img = new Image();
+                img.src = transformedImages[i] as string;
+                await new Promise((resolve) => setTimeout(resolve, 1));
+                gif.addFrame(img, { delay: 100 });
+            }
+
+            // backwards loop
+            for (let i = transformedImages.length - 2; i > 0; i--) {
+                const img = new Image();
+                img.src = transformedImages[i] as string;
+                await new Promise((resolve) => setTimeout(resolve, 1));
+                gif.addFrame(img, { delay: 100 });
+            }
+
+            return new Promise<string>((resolve, reject) => {
+                gif.on("finished", function (blob) {
+                    resolve(URL.createObjectURL(blob));
                 });
 
                 gif.render();
-            } catch (error) {
-                console.error("Failed to create GIF", error);
-                setIsGenerating(false);
-                reject(error);
-            }
+            });
+        } catch (error) {
+            console.error("Failed to create GIF", error);
+            throw error;
+        }
+    };
+
+    return transformAndCreateGif()
+        .then((gifUrl) => {
+            // Handle the gifUrl here, e.g., display it or send it to a server
+            setIsGenerating(false);
+            return gifUrl;
+        })
+        .catch((error) => {
+            console.error("Error in generating GIF", error);
+            setIsGenerating(false);
+            throw error;
         });
-    }
 };
 export default function Home() {
     const [images, setImages] = React.useState<string[]>([]);
@@ -196,6 +198,8 @@ export default function Home() {
     const [count, setCount] = React.useState(0);
     const [current, setCurrent] = React.useState(0);
     const [isGenerating, setIsGenerating] = React.useState(false);
+    const [gifUrl, setGifUrl] = React.useState<string | null>(null);
+    const [showDialog, setShowDialog] = React.useState(false);
 
     const { toast } = useToast();
 
@@ -212,17 +216,6 @@ export default function Home() {
             setCurrent(api.selectedScrollSnap() + 1);
         });
     }, [api, carouselLength]);
-
-    React.useEffect(() => {
-        console.log("isGenerating changed:", isGenerating);
-        if (!isGenerating) {
-            return;
-        }
-        const generateAsync = async () => {
-            await generate(originalImages, points, setIsGenerating);
-        };
-        generateAsync();
-    }, [isGenerating]);
 
     const handleAddPoint = (
         event: React.MouseEvent<HTMLDivElement>,
@@ -254,7 +247,7 @@ export default function Home() {
                     canvas.width = imgElement.naturalWidth;
                     canvas.height = imgElement.naturalHeight;
                     ctx.drawImage(imgElement, 0, 0);
-                    ctx.fillStyle = "red";
+                    ctx.fillStyle = "#FF711A";
                     ctx.beginPath();
                     ctx.arc(
                         x * (imgElement.naturalWidth / rect.width),
@@ -282,9 +275,14 @@ export default function Home() {
             <div className="hidden h-full flex-1 flex-col space-y-8 p-8 md:flex">
                 <div className="flex items-center justify-between space-y-2">
                     <div>
-                        <h2 className="text-2xl font-bold tracking-tight">
+                        <h1
+                            className={
+                                font.className +
+                                " text-3xl font-bold tracking-tight text-primary"
+                            }
+                        >
                             Wigglegrams
-                        </h2>
+                        </h1>
                         <p className="text-muted-foreground">
                             Create wigglegrams in just a few clicks. Upload a
                             minimum of 3 images to get started.
@@ -306,7 +304,9 @@ export default function Home() {
                                             {imageSrc ===
                                             "placeholder_image_src" ? (
                                                 <div className="flex aspect-square items-center justify-center w-full h-full">
-                                                    <span className="text-4xl font-semibold">
+                                                    <span
+                                                        className={`${font.className} text-4xl font-semibold`}
+                                                    >
                                                         Image {index + 1}
                                                     </span>
                                                 </div>
@@ -344,7 +344,7 @@ export default function Home() {
                 </Carousel>
             </div>
             <div className="flex items-center justify-center h-full py-2">
-                {Array(images.length)
+                {Array(Math.max(images.length, 3))
                     .fill(null)
                     .map((_, index) => (
                         <span
@@ -375,30 +375,31 @@ export default function Home() {
                     >
                         {images.length > 0 ? "Reset" : "Upload"}
                     </Button>
-                    <Dialog>
-                        {points.filter((point) => point !== undefined)
-                            .length === images.length ? (
-                            <DialogTrigger asChild>
-                                <Button className="flex-1">Generate</Button>
-                            </DialogTrigger>
-                        ) : (
-                            <Button
-                                className="flex-1"
-                                onClick={() =>
-                                    toast({
-                                        title:
-                                            "Minimum " +
-                                            images.length +
-                                            " points required",
-                                        variant: "destructive",
-                                        description:
-                                            "Please add a point to each image.",
-                                    })
-                                }
-                            >
-                                Generate
-                            </Button>
-                        )}
+                    <Button
+                        className="flex-1"
+                        onClick={() => {
+                            if (
+                                points.filter((point) => point !== undefined)
+                                    .length === images.length
+                            ) {
+                                setShowDialog(true);
+                            } else {
+                                toast({
+                                    title:
+                                        "Minimum " +
+                                        images.length +
+                                        " points required",
+                                    variant: "destructive",
+                                    description:
+                                        "Please add a point to each image.",
+                                });
+                            }
+                        }}
+                    >
+                        Generate
+                    </Button>
+
+                    <Dialog open={showDialog} onOpenChange={setShowDialog}>
                         <DialogContent className="sm:max-w-md">
                             <DialogHeader>
                                 <DialogTitle>Generate Wigglegram</DialogTitle>
@@ -422,6 +423,50 @@ export default function Home() {
                                     type="button"
                                     onClick={async () => {
                                         setIsGenerating(true);
+                                        const generatedGifUrl = await generate(
+                                            originalImages,
+                                            points,
+                                            setIsGenerating
+                                        );
+                                        if (generatedGifUrl) {
+                                            setGifUrl(generatedGifUrl);
+                                            setShowDialog(false);
+                                            // Display the generated GIF in a new dialog
+                                            // toast({
+                                            //     title: "Wigglegram Generated Successfully",
+                                            //     description:
+                                            //         "Your Wigglegram is ready to download.",
+                                            //     action: (
+                                            //         <Button
+                                            //             onClick={() => {
+                                            //                 console.log(
+                                            //                     "Download"
+                                            //                 );
+                                            //                 const link =
+                                            //                     document.createElement(
+                                            //                         "a"
+                                            //                     );
+                                            //                 link.href =
+                                            //                     generatedGifUrl;
+                                            //                 link.download =
+                                            //                     "wigglegram.gif"; // Provide a default filename for the download
+                                            //                 document.body.appendChild(
+                                            //                     link
+                                            //                 );
+                                            //                 link.click();
+                                            //                 document.body.removeChild(
+                                            //                     link
+                                            //                 );
+                                            //             }}
+                                            //         >
+                                            //             <Download
+                                            //                 size={16}
+                                            //                 strokeWidth={2}
+                                            //             />
+                                            //         </Button>
+                                            //     ),
+                                            // });
+                                        }
                                     }}
                                     disabled={isGenerating}
                                 >
@@ -437,6 +482,57 @@ export default function Home() {
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
+
+                    {gifUrl && !showDialog && (
+                        <Dialog
+                            open={!!gifUrl}
+                            onOpenChange={(open) => !open && setGifUrl(null)}
+                        >
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>
+                                        Your Wigglegram is Ready!
+                                    </DialogTitle>
+                                    <DialogClose />
+                                </DialogHeader>
+                                <DialogDescription>
+                                    <div className="flex flex-col items-center justify-center">
+                                        <img
+                                            src={gifUrl}
+                                            alt="Generated Wigglegram"
+                                            className="max-w-full h-auto"
+                                            style={{
+                                                imageRendering: "pixelated",
+                                            }}
+                                        />
+                                    </div>
+                                </DialogDescription>
+                                <DialogFooter>
+                                    <DialogClose asChild>
+                                        <Button
+                                            type="button"
+                                            variant="secondary"
+                                        >
+                                            Close
+                                        </Button>
+                                    </DialogClose>
+                                    <Button
+                                        onClick={() => {
+                                            const link =
+                                                document.createElement("a");
+                                            link.href = gifUrl;
+                                            link.download = "wigglegram.gif";
+                                            document.body.appendChild(link);
+                                            link.click();
+                                            document.body.removeChild(link);
+                                        }}
+                                    >
+                                        Download
+                                    </Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+                    )}
                 </div>
             </div>
         </>
