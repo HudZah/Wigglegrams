@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import ImageMagnifier from "./magnifier";
 
 const font = Jua({
     subsets: ["latin"],
@@ -338,12 +339,12 @@ export default function Home() {
                                                         cursor: "pointer",
                                                     }}
                                                 >
-                                                    <ReactImageMagnifier
-                                                        srcPreview={imageSrc}
-                                                        srcOriginal={imageSrc}
+                                                    <ImageMagnifier
                                                         width="100%"
                                                         height="100%"
+                                                        src={imageSrc}
                                                     />
+                                                    
                                                 </div>
                                             )}
                                         </CardContent>
