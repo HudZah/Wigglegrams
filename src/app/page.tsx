@@ -369,9 +369,13 @@ export default function Home() {
                                             "placeholder_image_src" ? (
                                                 <div className="flex aspect-square items-center justify-center w-full h-full">
                                                     <span
-                                                        className={`${font.className} text-4xl font-semibold`}
+                                                        className={`${font.className} text-4xl font-semibold text-center`}
                                                     >
-                                                        Image {index + 1}
+                                                        {index + 1 === 1
+                                                            ? "Add at least 3 photos!"
+                                                            : index + 1 === 2
+                                                            ? "Select points to wiggle the image around"
+                                                            : "Generate your wigglegram!"}
                                                     </span>
                                                 </div>
                                             ) : (
