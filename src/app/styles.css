@@ -21,3 +21,25 @@
     font-weight: 400;
     font-style: normal;
 }
+
+/* @keyframes borderGradient {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+.gradient-border {
+    border: 2px solid transparent;
+    animation: borderGradient 2s infinite linear;
+    background-clip: padding-box, border-box;
+    background-origin: border-box;
+    background-image: linear-gradient(white, white),
+        linear-gradient(45deg, #ff9d2f, #ff9d2f, #fff);
+    background-size: 100% 100%, 200% 200%;
+} */

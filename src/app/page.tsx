@@ -2,16 +2,23 @@
 
 import "./styles.css";
 import React, { useState } from "react";
-import { Download, Loader2, BookImage, Wand2 } from "lucide-react";
+import {
+    Download,
+    Loader2,
+    BookImage,
+    Wand2,
+    Upload,
+    Check,
+    Trash2,
+} from "lucide-react";
 import Head from "next/head";
 import Link from "next/link";
 
 import { useToast } from "@/components/ui/use-toast";
-import { ToastAction } from "@/components/ui/toast";
 import { Jua } from "next/font/google";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import GIF from "gif.js";
-import ReactImageMagnifier from "simple-image-magnifier/react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -22,6 +29,17 @@ import {
     CarouselPrevious,
     type CarouselApi,
 } from "@/components/ui/carousel";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -35,7 +53,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import ImageMagnifier from "./magnifier";
+import ImageMagnifier from "../components/magnifier";
 
 const font = Jua({
     subsets: ["latin"],
@@ -115,6 +133,12 @@ const generate = async (
                         const selectedPoint = points[index];
                         const dx = refPoint.x - selectedPoint.x;
                         const dy = refPoint.y - selectedPoint.y;
+
+                        console.log("refPoint", refPoint);
+                        console.log("selectedPoint", selectedPoint);
+
+                        console.log("dx", dx);
+                        console.log("dy", dy);
 
                         if (ctx) {
                             ctx.translate(dx, dy);
@@ -204,6 +228,9 @@ export default function Home() {
     const [isGenerating, setIsGenerating] = React.useState(false);
     const [gifUrl, setGifUrl] = React.useState<string | null>(null);
     const [showDialog, setShowDialog] = React.useState(false);
+    const [scaledPoints, setScaledPoints] = React.useState<
+        { x: number; y: number }[]
+    >([]);
 
     const { toast } = useToast();
 
@@ -250,6 +277,20 @@ export default function Home() {
                 if (ctx) {
                     canvas.width = imgElement.naturalWidth;
                     canvas.height = imgElement.naturalHeight;
+
+                    const scaledX = x * (imgElement.naturalWidth / rect.width);
+                    const scaledY =
+                        y * (imgElement.naturalHeight / rect.height);
+
+                    console.log("scaledX", scaledX);
+                    console.log("scaledY", scaledY);
+
+                    setScaledPoints((prevPoints) => {
+                        const updatedPoints = [...prevPoints];
+                        updatedPoints[index] = { x: scaledX, y: scaledY };
+                        return updatedPoints;
+                    });
+
                     ctx.drawImage(imgElement, 0, 0);
                     ctx.fillStyle = "#FF711A";
                     ctx.beginPath();
@@ -294,15 +335,17 @@ export default function Home() {
                         Wigglegrams
                     </h1>
                     <p className="text-muted-foreground">
-                        Create wigglegrams in just a few clicks. Upload a
-                        minimum of 3 images to get started. Your photos never
-                        leave your device.
+                        Create wigglegrams in just a few clicks. Upload at least
+                        3 photos. Choose a point to wiggle the image around. And
+                        generate! Your photos never leave your device.
                     </p>
                 </div>
-                <Button>
-                    <BookImage className="mr-2 h-4 w-4" />
-                    <Link href="https://www.hudzah.com/photos">Gallery</Link>
-                </Button>
+                <Link href="https://www.hudzah.com/photos">
+                    <Button>
+                        <BookImage className="mr-2 h-4 w-4" />
+                        Gallery
+                    </Button>
+                </Link>
             </div>
             <div className="flex justify-center items-center h-[60%]">
                 <Carousel setApi={setApi} className="w-full max-w-[32rem]">
@@ -313,7 +356,14 @@ export default function Home() {
                         ).map((imageSrc, index) => (
                             <CarouselItem key={index}>
                                 <div className="p-1 relative">
-                                    <Card>
+                                    <Card
+                                    // className={
+                                    //     points[index]
+                                    //         ? // orange border
+                                    //           "border-orange-500 border-2 rounded-lg"
+                                    //         : ""
+                                    // }
+                                    >
                                         <CardContent className="flex aspect-square items-center justify-center p-1">
                                             {imageSrc ===
                                             "placeholder_image_src" ? (
@@ -336,7 +386,7 @@ export default function Home() {
                                                     }}
                                                     style={{
                                                         position: "relative",
-                                                        cursor: "pointer",
+                                                        cursor: "crosshair",
                                                     }}
                                                 >
                                                     <ImageMagnifier
@@ -344,7 +394,6 @@ export default function Home() {
                                                         height="100%"
                                                         src={imageSrc}
                                                     />
-                                                    
                                                 </div>
                                             )}
                                         </CardContent>
@@ -361,35 +410,93 @@ export default function Home() {
                 {Array(Math.max(images.length, 3))
                     .fill(null)
                     .map((_, index) => (
+                        // check if theres a point for this index, if so add a filled circle with bg-primary otherwise keep the bg-gary-300. If you're on current index, add a border-primary
                         <span
                             key={index}
                             className={`inline-block mx-1 rounded-full ${
                                 index + 1 === current
-                                    ? "bg-primary"
-                                    : "bg-gray-300"
+                                    ? "border-2 border-primary"
+                                    : points[index]
+                                    ? "bg-primary border-2 border-primary"
+                                    : "bg-gray-300 border-2 border-gray-300"
                             } w-3 h-3`}
                         ></span>
                     ))}
             </div>
             <div className="flex justify-center my-8 space-x-6">
                 <div className="w-full max-w-[16rem] flex justify-between space-x-4">
+                    {!images.length ? (
+                        <Button
+                            className="flex-1"
+                            variant={"secondary"}
+                            onClick={() =>
+                                images.length > 0
+                                    ? reset(
+                                          setImages,
+                                          setCarouselLength,
+                                          setPoints
+                                      )
+                                    : upload(
+                                          setImages,
+                                          setOriginalImages,
+                                          setCarouselLength,
+                                          toast
+                                      )
+                            }
+                        >
+                            <>
+                                <Upload className="mr-2 h-4 w-4" /> Add Photos
+                            </>
+                        </Button>
+                    ) : (
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button
+                                    className="flex-1"
+                                    variant={"secondary"}
+                                >
+                                    <>
+                                        <Trash2 className="mr-2 h-4 w-4" />{" "}
+                                        Reset
+                                    </>
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                        Reset Images
+                                    </AlertDialogTitle>
+                                </AlertDialogHeader>
+                                <AlertDialogDescription>
+                                    This action will clear all selected images
+                                    and points. This action cannot be undone.
+                                </AlertDialogDescription>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel asChild>
+                                        <Button variant="outline">
+                                            Cancel
+                                        </Button>
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction asChild>
+                                        <Button
+                                            variant="destructive"
+                                            onClick={() =>
+                                                reset(
+                                                    setImages,
+                                                    setCarouselLength,
+                                                    setPoints
+                                                )
+                                            }
+                                        >
+                                            Continue
+                                        </Button>
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    )}
                     <Button
-                        className="flex-1"
-                        variant={"secondary"}
-                        onClick={() =>
-                            images.length > 0
-                                ? reset(setImages, setCarouselLength, setPoints)
-                                : upload(
-                                      setImages,
-                                      setOriginalImages,
-                                      setCarouselLength,
-                                      toast
-                                  )
-                        }
-                    >
-                        {images.length > 0 ? "Reset" : "Add Photos"}
-                    </Button>
-                    <Button
+                        disabled={!images.length}
                         className="flex-1"
                         onClick={() => {
                             if (
@@ -439,7 +546,7 @@ export default function Home() {
                                         setIsGenerating(true);
                                         const generatedGifUrl = await generate(
                                             originalImages,
-                                            points,
+                                            scaledPoints,
                                             setIsGenerating
                                         );
                                         if (generatedGifUrl) {
@@ -523,10 +630,7 @@ export default function Home() {
                                 </DialogDescription>
                                 <DialogFooter>
                                     <DialogClose asChild>
-                                        <Button
-                                            type="button"
-                                            variant="secondary"
-                                        >
+                                        <Button type="button" variant="outline">
                                             Close
                                         </Button>
                                     </DialogClose>

@@ -9,6 +9,8 @@
         "lint": "next lint"
     },
     "dependencies": {
+        "@radix-ui/react-alert-dialog": "^1.0.5",
+        "@radix-ui/react-avatar": "^1.0.4",
         "@radix-ui/react-dialog": "^1.0.5",
         "@radix-ui/react-label": "^2.0.2",
         "@radix-ui/react-slot": "^1.0.2",
@@ -26,7 +28,8 @@
         "react-image-magnifiers": "^1.4.0",
         "simple-image-magnifier": "^1.0.9",
         "tailwind-merge": "^2.2.1",
-        "tailwindcss-animate": "^1.0.7"
+        "tailwindcss-animate": "^1.0.7",
+        "tailwindcss-border-gradient-radius": "^3.0.1"
     },
     "devDependencies": {
         "@types/gif.js": "^0.2.5",
