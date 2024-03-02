@@ -76,7 +76,8 @@ const upload = (
     const input = document.createElement("input");
     input.type = "file";
     input.multiple = true;
-    input.accept = "image/*";
+    input.accept =
+        "image/*,.heic,.heif,.heics,.heifs,.hej,.hevc,.hevx,.mif,.raf,.raw,.rw2";
     input.onchange = (e) => {
         const files = (e.target as HTMLInputElement).files;
 
