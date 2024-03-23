@@ -645,8 +645,8 @@ export default function Home() {
                                             const cropperJsOpts = {
                                                 width: crop.width * scaleX,
                                                 height: crop.height * scaleY,
-                                                x: crop.x * scaleX,
-                                                y: crop.y * scaleY,
+                                                x: -(crop.x * scaleX),
+                                                y: -(crop.y * scaleY),
                                                 rotate: 0,
                                             };
                                             console.log(
@@ -698,7 +698,7 @@ export default function Home() {
                     )}
                 </div>
             </div>
-            Latest
+            {/* Latest */}
         </>
     );
 }
