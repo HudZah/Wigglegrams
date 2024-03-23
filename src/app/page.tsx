@@ -1,7 +1,7 @@
 "use client";
 
 import "./styles.css";
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
     Download,
     Loader2,
@@ -13,12 +13,14 @@ import {
 } from "lucide-react";
 import Head from "next/head";
 import Link from "next/link";
-
+import { GIFCropper } from "gif-cropper";
 import { useToast } from "@/components/ui/use-toast";
 import { Jua } from "next/font/google";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import GIF from "gif.js";
+import ReactCrop, { type Crop } from "react-image-crop";
+import "react-image-crop/dist/ReactCrop.css";
 
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -233,6 +235,15 @@ export default function Home() {
         { x: number; y: number }[]
     >([]);
 
+    const [crop, setCrop] = useState<Crop>({
+        unit: "%", // Default, can be 'px' or '%'
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+    });
+    const imgRef = useRef<HTMLImageElement>(null);
+
     const { toast } = useToast();
 
     React.useEffect(() => {
@@ -349,7 +360,10 @@ export default function Home() {
                 </Link>
             </div>
             <div className="flex justify-center items-center h-[60%]">
-                <Carousel setApi={setApi} className="w-full max-w-[32rem]">
+                <Carousel
+                    setApi={setApi}
+                    className="w-full max-w-[32rem] background-primary"
+                >
                     <CarouselContent>
                         {(images.length > 0
                             ? images
@@ -524,7 +538,6 @@ export default function Home() {
                     >
                         <Wand2 className="mr-2 h-4 w-4" /> Generate
                     </Button>
-
                     <Dialog open={showDialog} onOpenChange={setShowDialog}>
                         <DialogContent className="sm:max-w-md">
                             <DialogHeader>
@@ -557,41 +570,6 @@ export default function Home() {
                                         if (generatedGifUrl) {
                                             setGifUrl(generatedGifUrl);
                                             setShowDialog(false);
-                                            // Display the generated GIF in a new dialog
-                                            // toast({
-                                            //     title: "Wigglegram Generated Successfully",
-                                            //     description:
-                                            //         "Your Wigglegram is ready to download.",
-                                            //     action: (
-                                            //         <Button
-                                            //             onClick={() => {
-                                            //                 console.log(
-                                            //                     "Download"
-                                            //                 );
-                                            //                 const link =
-                                            //                     document.createElement(
-                                            //                         "a"
-                                            //                     );
-                                            //                 link.href =
-                                            //                     generatedGifUrl;
-                                            //                 link.download =
-                                            //                     "wigglegram.gif"; // Provide a default filename for the download
-                                            //                 document.body.appendChild(
-                                            //                     link
-                                            //                 );
-                                            //                 link.click();
-                                            //                 document.body.removeChild(
-                                            //                     link
-                                            //                 );
-                                            //             }}
-                                            //         >
-                                            //             <Download
-                                            //                 size={16}
-                                            //                 strokeWidth={2}
-                                            //             />
-                                            //         </Button>
-                                            //     ),
-                                            // });
                                         }
                                     }}
                                     disabled={isGenerating}
@@ -608,7 +586,6 @@ export default function Home() {
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
-
                     {gifUrl && !showDialog && (
                         <Dialog
                             open={!!gifUrl}
@@ -623,14 +600,20 @@ export default function Home() {
                                 </DialogHeader>
                                 <DialogDescription>
                                     <div className="flex flex-col items-center justify-center">
-                                        <img
-                                            src={gifUrl}
-                                            alt="Generated Wigglegram"
-                                            className="max-w-full h-auto"
-                                            style={{
-                                                imageRendering: "pixelated",
-                                            }}
-                                        />
+                                        <ReactCrop
+                                            crop={crop}
+                                            onChange={(c) => setCrop(c)}
+                                        >
+                                            <img
+                                                ref={imgRef}
+                                                src={gifUrl}
+                                                alt="Generated Wigglegram"
+                                                className="max-w-full h-auto"
+                                                style={{
+                                                    imageRendering: "pixelated",
+                                                }}
+                                            />
+                                        </ReactCrop>
                                     </div>
                                 </DialogDescription>
                                 <DialogFooter>
@@ -640,14 +623,71 @@ export default function Home() {
                                         </Button>
                                     </DialogClose>
                                     <Button
-                                        onClick={() => {
-                                            const link =
-                                                document.createElement("a");
-                                            link.href = gifUrl;
-                                            link.download = "wigglegram.gif";
-                                            document.body.appendChild(link);
-                                            link.click();
-                                            document.body.removeChild(link);
+                                        onClick={async () => {
+                                            // const link =
+                                            //     document.createElement("a");
+                                            // link.href = gifUrl;
+                                            // link.download = "wigglegram.gif";
+                                            // document.body.appendChild(link);
+                                            // link.click();
+                                            // document.body.removeChild(link);
+                                            console.log(crop);
+                                            const image =
+                                                imgRef.current as HTMLImageElement;
+                                            const scaleX =
+                                                image.naturalWidth /
+                                                image.width;
+                                            const scaleY =
+                                                image.naturalHeight /
+                                                image.height;
+                                            console.log("scaleX", scaleX);
+                                            console.log("scaleY", scaleY);
+                                            const cropperJsOpts = {
+                                                width: crop.width * scaleX,
+                                                height: crop.height * scaleY,
+                                                x: crop.x * scaleX,
+                                                y: crop.y * scaleY,
+                                                rotate: 0,
+                                            };
+                                            console.log(
+                                                "cropperJsOpts",
+                                                cropperJsOpts
+                                            );
+
+                                            const imageCropper = new GIFCropper(
+                                                {
+                                                    src: image.src,
+                                                    cropperJsOpts:
+                                                        cropperJsOpts,
+                                                }
+                                            );
+
+                                            imageCropper
+                                                .crop()
+                                                .then((blobUrl) => {
+                                                    const link =
+                                                        document.createElement(
+                                                            "a"
+                                                        );
+                                                    link.href = blobUrl;
+                                                    link.download =
+                                                        "wigglegram_" +
+                                                        new Date().toISOString() +
+                                                        ".gif";
+                                                    document.body.appendChild(
+                                                        link
+                                                    );
+                                                    link.click();
+                                                    document.body.removeChild(
+                                                        link
+                                                    );
+                                                })
+                                                .catch((error) => {
+                                                    console.error(
+                                                        "Error cropping the GIF:",
+                                                        error
+                                                    );
+                                                });
                                         }}
                                     >
                                         Download
@@ -658,6 +698,7 @@ export default function Home() {
                     )}
                 </div>
             </div>
+            Latest
         </>
     );
 }
