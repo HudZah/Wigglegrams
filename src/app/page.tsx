@@ -118,7 +118,8 @@ const reset = (
 const generate = async (
     images: string[],
     points: { x: number; y: number }[],
-    setIsGenerating: React.Dispatch<React.SetStateAction<boolean>>
+    setIsGenerating: React.Dispatch<React.SetStateAction<boolean>>,
+    frameDelay: number
 ): Promise<string> => {
     const refPoint = points[0];
     const transformAndCreateGif = async (): Promise<string> => {
@@ -184,7 +185,7 @@ const generate = async (
                 const img = new Image();
                 img.src = transformedImages[i] as string;
                 await new Promise((resolve) => setTimeout(resolve, 1));
-                gif.addFrame(img, { delay: 100 });
+                gif.addFrame(img, { delay: frameDelay });
             }
 
             // backwards loop
@@ -192,7 +193,7 @@ const generate = async (
                 const img = new Image();
                 img.src = transformedImages[i] as string;
                 await new Promise((resolve) => setTimeout(resolve, 1));
-                gif.addFrame(img, { delay: 100 });
+                gif.addFrame(img, { delay: frameDelay });
             }
 
             return new Promise<string>((resolve, reject) => {
@@ -234,6 +235,7 @@ export default function Home() {
     const [scaledPoints, setScaledPoints] = React.useState<
         { x: number; y: number }[]
     >([]);
+    const [frameDelay, setFrameDelay] = React.useState(100);
 
     const [crop, setCrop] = useState<Crop>({
         unit: "%", // Default, can be 'px' or '%'
@@ -553,6 +555,11 @@ export default function Home() {
                                         type="number"
                                         defaultValue="100"
                                         placeholder="Enter Frame Duration (ms)"
+                                        onChange={(e) =>
+                                            setFrameDelay(
+                                                Number(e.target.value)
+                                            )
+                                        }
                                         // TODO: add frame duration functionality
                                     />
                                 </div>
@@ -565,7 +572,8 @@ export default function Home() {
                                         const generatedGifUrl = await generate(
                                             originalImages,
                                             scaledPoints,
-                                            setIsGenerating
+                                            setIsGenerating,
+                                            frameDelay
                                         );
                                         if (generatedGifUrl) {
                                             setGifUrl(generatedGifUrl);
